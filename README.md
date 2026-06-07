@@ -36,6 +36,11 @@ two environment variables your `build.zig` reads:
 - `HATCH_ZIG_PYTHON_INCLUDE` - the building interpreter's `platinclude`
 - `HATCH_ZIG_EXT_SUFFIX` - the building interpreter's `EXT_SUFFIX` (e.g. `.cpython-312-darwin.so`)
 
+On Windows it also passes the import library so the `.pyd` can link `pythonXY.lib`:
+
+- `HATCH_ZIG_PYTHON_LIBDIR` - the `libs` directory under `sys.base_prefix`
+- `HATCH_ZIG_PYTHON_LIB` - the bare lib name (e.g. `python314`, `python314t` for free-threaded)
+
 On macOS under cibuildwheel, the hook reads `ARCHFLAGS` and `MACOSX_DEPLOYMENT_TARGET` to emit a
 matching `-Dtarget=<arch>-macos[.<min>]`, so the compiled `.so` and the wheel tag agree and delocate
 accepts the repaired wheel.

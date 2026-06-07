@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import sysconfig
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest import mock
 
 import pytest
 
 from hatch_ziglang.hooks import hatch_register_build_hook
-from hatch_ziglang.plugin import ZigBuildHook, _zig_command, _zig_target_args
+from hatch_ziglang.plugin import ZigBuildHook, _windows_python_link, _zig_command, _zig_target_args
 
 
 def make_hook(root: Path, config: dict[str, Any], target_name: str = "wheel") -> ZigBuildHook:
@@ -155,3 +156,26 @@ def test_zig_target_args_without_min_version(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("ARCHFLAGS", "-arch arm64")
     monkeypatch.delenv("MACOSX_DEPLOYMENT_TARGET", raising=False)
     assert _zig_target_args() == ["-Dtarget=aarch64-macos"]
+
+
+def test_windows_python_link_non_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "linux")
+    assert _windows_python_link() == {}
+
+
+def test_windows_python_link(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "win32")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.base_prefix", r"C:\Python314")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.version_info", SimpleNamespace(major=3, minor=14))
+    monkeypatch.setattr("hatch_ziglang.plugin.sysconfig.get_config_var", lambda name: "t")
+    env = _windows_python_link()
+    assert env["HATCH_ZIG_PYTHON_LIB"] == "python314t"
+    assert env["HATCH_ZIG_PYTHON_LIBDIR"].endswith("libs")
+
+
+def test_windows_python_link_no_abiflags(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "win32")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.base_prefix", r"C:\Python313")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.version_info", SimpleNamespace(major=3, minor=13))
+    monkeypatch.setattr("hatch_ziglang.plugin.sysconfig.get_config_var", lambda name: None)
+    assert _windows_python_link()["HATCH_ZIG_PYTHON_LIB"] == "python313"

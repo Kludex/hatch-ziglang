@@ -32,6 +32,19 @@ def _zig_target_args() -> list[str]:
     return [f"-Dtarget={target}"]
 
 
+def _windows_python_link() -> dict[str, str]:
+    """On Windows, the `.pyd` must link the interpreter's import library
+    (`pythonXY.lib`), which lives in `<base>/libs`. Return the env vars `build.zig`
+    needs: the libs dir and the bare lib name (e.g. `python314`)."""
+    if sys.platform != "win32":
+        return {}
+    libdir = os.path.join(sys.base_prefix, "libs")
+    # e.g. (3, 14) -> "python314"; free-threaded builds use "python314t".
+    abiflags = sysconfig.get_config_var("abiflags") or ""
+    libname = f"python{sys.version_info.major}{sys.version_info.minor}{abiflags}"
+    return {"HATCH_ZIG_PYTHON_LIBDIR": libdir, "HATCH_ZIG_PYTHON_LIB": libname}
+
+
 def _zig_command() -> list[str]:
     """Resolve how to invoke Zig: a `zig` on PATH, else the `ziglang` pip package.
 
@@ -62,7 +75,8 @@ class ZigBuildHook(BuildHookInterface[Any]):
         optimize  Zig `-Doptimize` mode (default ReleaseFast); overridable via HATCH_ZIG_BUILD_MODE
 
     `build.zig` receives the interpreter paths through `HATCH_ZIG_PYTHON_INCLUDE` and
-    `HATCH_ZIG_EXT_SUFFIX`.
+    `HATCH_ZIG_EXT_SUFFIX`; on Windows it also gets `HATCH_ZIG_PYTHON_LIBDIR` and
+    `HATCH_ZIG_PYTHON_LIB` for linking `pythonXY.lib`.
     """
 
     PLUGIN_NAME = "zig"
@@ -71,7 +85,7 @@ class ZigBuildHook(BuildHookInterface[Any]):
     def _package(self) -> str:
         package = self.config.get("package")
         if not package:
-            raise ValueError("hatch-zig requires `package` in [tool.hatch.build.targets.wheel.hooks.zig]")
+            raise ValueError("hatch-ziglang requires `package` in [tool.hatch.build.targets.wheel.hooks.zig]")
         return str(package)
 
     @property
@@ -88,7 +102,12 @@ class ZigBuildHook(BuildHookInterface[Any]):
         if not include or not ext_suffix:
             raise RuntimeError("could not resolve platinclude / EXT_SUFFIX from the building interpreter")
 
-        env = {**os.environ, "HATCH_ZIG_PYTHON_INCLUDE": include, "HATCH_ZIG_EXT_SUFFIX": ext_suffix}
+        env = {
+            **os.environ,
+            "HATCH_ZIG_PYTHON_INCLUDE": include,
+            "HATCH_ZIG_EXT_SUFFIX": ext_suffix,
+            **_windows_python_link(),
+        }
         subprocess.run(
             [*_zig_command(), "build", f"-Doptimize={self._optimize}", *_zig_target_args()],
             cwd=root,

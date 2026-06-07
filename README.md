@@ -1,4 +1,4 @@
-# hatch-zig
+# hatch-ziglang
 
 A [Hatch](https://hatch.pypa.io/) build hook that compiles a [Zig](https://ziglang.org/) extension
 into the wheel, against the building interpreter, with no out-of-band step.
@@ -13,7 +13,7 @@ Add the build requirement and configure the hook in `pyproject.toml`:
 
 ```toml
 [build-system]
-requires = ["hatchling", "hatch-zig", "ziglang==0.16.0"]
+requires = ["hatchling", "hatch-ziglang", "ziglang==0.16.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel.hooks.zig]

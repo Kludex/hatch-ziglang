@@ -3,7 +3,7 @@ requires = ["hatchling", "uv-dynamic-versioning>=0.8.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hatch-zig"
+name = "hatch-ziglang"
 description = "A Hatch build hook that compiles a Zig extension into the wheel."
 readme = "README.md"
 license = "BSD-3-Clause"
@@ -20,7 +20,7 @@ dependencies = ["hatchling"]
 dynamic = ["version"]
 
 [project.entry-points.hatch]
-zig = "hatch_zig.hooks"
+zig = "hatch_ziglang.hooks"
 
 [dependency-groups]
 dev = ["pytest>=8.0", "coverage>=7.0", "ruff", "mypy"]
@@ -42,7 +42,7 @@ testpaths = ["tests"]
 filterwarnings = ["error"]
 
 [tool.coverage.run]
-source_pkgs = ["hatch_zig", "tests"]
+source_pkgs = ["hatch_ziglang", "tests"]
 branch = true
 parallel = true
 

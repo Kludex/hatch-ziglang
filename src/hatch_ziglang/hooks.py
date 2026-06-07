@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from hatchling.plugin import hookimpl
 
-from hatch_zig.plugin import ZigBuildHook
+from hatch_ziglang.plugin import ZigBuildHook
 
 
 @hookimpl

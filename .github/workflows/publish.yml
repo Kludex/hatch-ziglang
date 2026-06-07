@@ -43,7 +43,7 @@ jobs:
 
     environment:
       name: pypi
-      url: https://pypi.org/project/hatch-zig
+      url: https://pypi.org/project/hatch-ziglang
 
     steps:
       - name: Download distributions

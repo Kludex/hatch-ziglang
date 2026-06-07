@@ -181,7 +181,7 @@ wheels = [
 ]
 
 [[package]]
-name = "hatch-zig"
+name = "hatch-ziglang"
 source = { editable = "." }
 dependencies = [
     { name = "hatchling" },

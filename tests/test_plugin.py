@@ -7,8 +7,8 @@ from unittest import mock
 
 import pytest
 
-from hatch_zig.hooks import hatch_register_build_hook
-from hatch_zig.plugin import ZigBuildHook, _zig_command, _zig_target_args
+from hatch_ziglang.hooks import hatch_register_build_hook
+from hatch_ziglang.plugin import ZigBuildHook, _zig_command, _zig_target_args
 
 
 def make_hook(root: Path, config: dict[str, Any], target_name: str = "wheel") -> ZigBuildHook:
@@ -48,7 +48,7 @@ def test_optimize_default_and_override(tmp_path: Path, monkeypatch: pytest.Monke
 def test_initialize_skips_non_wheel(tmp_path: Path) -> None:
     hook = make_hook(tmp_path, {"package": "foo"}, target_name="sdist")
     build_data: dict[str, Any] = {"artifacts": []}
-    with mock.patch("hatch_zig.plugin.subprocess.run") as run:
+    with mock.patch("hatch_ziglang.plugin.subprocess.run") as run:
         hook.initialize("1.0", build_data)
     run.assert_not_called()
     assert build_data == {"artifacts": []}
@@ -69,8 +69,8 @@ def test_initialize_builds_and_tags(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         assert kwargs["env"]["HATCH_ZIG_PYTHON_INCLUDE"]
         assert kwargs["env"]["HATCH_ZIG_EXT_SUFFIX"] == ext_suffix
 
-    with mock.patch("hatch_zig.plugin._zig_command", return_value=["zig"]):
-        with mock.patch("hatch_zig.plugin.subprocess.run", side_effect=fake_run):
+    with mock.patch("hatch_ziglang.plugin._zig_command", return_value=["zig"]):
+        with mock.patch("hatch_ziglang.plugin.subprocess.run", side_effect=fake_run):
             hook.initialize("1.0", build_data)
 
     assert build_data["pure_python"] is False
@@ -80,15 +80,15 @@ def test_initialize_builds_and_tags(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 def test_initialize_missing_artifact(tmp_path: Path) -> None:
     hook = make_hook(tmp_path, {"package": "foo"})
-    with mock.patch("hatch_zig.plugin._zig_command", return_value=["zig"]):
-        with mock.patch("hatch_zig.plugin.subprocess.run"):
+    with mock.patch("hatch_ziglang.plugin._zig_command", return_value=["zig"]):
+        with mock.patch("hatch_ziglang.plugin.subprocess.run"):
             with pytest.raises(RuntimeError, match="did not produce"):
                 hook.initialize("1.0", {"artifacts": []})
 
 
 def test_initialize_missing_interpreter_paths(tmp_path: Path) -> None:
     hook = make_hook(tmp_path, {"package": "foo"})
-    with mock.patch("hatch_zig.plugin.sysconfig.get_path", return_value=None):
+    with mock.patch("hatch_ziglang.plugin.sysconfig.get_path", return_value=None):
         with pytest.raises(RuntimeError, match="platinclude"):
             hook.initialize("1.0", {"artifacts": []})
 
@@ -108,18 +108,18 @@ def test_clean_removes_extensions(tmp_path: Path) -> None:
 
 
 def test_zig_command_prefers_path() -> None:
-    with mock.patch("hatch_zig.plugin.shutil.which", return_value="/usr/bin/zig"):
+    with mock.patch("hatch_ziglang.plugin.shutil.which", return_value="/usr/bin/zig"):
         assert _zig_command() == ["zig"]
 
 
 def test_zig_command_falls_back_to_ziglang() -> None:
-    with mock.patch("hatch_zig.plugin.shutil.which", return_value=None):
+    with mock.patch("hatch_ziglang.plugin.shutil.which", return_value=None):
         with mock.patch.dict("sys.modules", {"ziglang": mock.Mock()}):
             assert _zig_command()[1:] == ["-m", "ziglang"]
 
 
 def test_zig_command_missing_toolchain() -> None:
-    with mock.patch("hatch_zig.plugin.shutil.which", return_value=None):
+    with mock.patch("hatch_ziglang.plugin.shutil.which", return_value=None):
         with mock.patch.dict("sys.modules", {"ziglang": None}):
             with pytest.raises(RuntimeError, match="Zig toolchain not found"):
                 _zig_command()
@@ -127,31 +127,31 @@ def test_zig_command_missing_toolchain() -> None:
 
 def test_zig_target_args_non_macos(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ARCHFLAGS", "-arch arm64")
-    monkeypatch.setattr("hatch_zig.plugin.sys.platform", "linux")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "linux")
     assert _zig_target_args() == []
 
 
 def test_zig_target_args_no_single_arch(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("hatch_zig.plugin.sys.platform", "darwin")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "darwin")
     monkeypatch.setenv("ARCHFLAGS", "-arch arm64 -arch x86_64")
     assert _zig_target_args() == []
 
 
 def test_zig_target_args_unknown_arch(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("hatch_zig.plugin.sys.platform", "darwin")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "darwin")
     monkeypatch.setenv("ARCHFLAGS", "-arch ppc64")
     assert _zig_target_args() == []
 
 
 def test_zig_target_args_with_min_version(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("hatch_zig.plugin.sys.platform", "darwin")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "darwin")
     monkeypatch.setenv("ARCHFLAGS", "-arch x86_64")
     monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", "11.0")
     assert _zig_target_args() == ["-Dtarget=x86_64-macos.11.0"]
 
 
 def test_zig_target_args_without_min_version(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("hatch_zig.plugin.sys.platform", "darwin")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "darwin")
     monkeypatch.setenv("ARCHFLAGS", "-arch arm64")
     monkeypatch.delenv("MACOSX_DEPLOYMENT_TARGET", raising=False)
     assert _zig_target_args() == ["-Dtarget=aarch64-macos"]

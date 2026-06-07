@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.8.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hatch-zig"
+description = "A Hatch build hook that compiles a Zig extension into the wheel."
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Marcelo Trylesinski", email = "marcelotryle@gmail.com" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Hatch",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Zig",
+]
+dependencies = ["hatchling"]
+dynamic = ["version"]
+
+[project.entry-points.hatch]
+zig = "hatch_zig.hooks"
+
+[dependency-groups]
+dev = ["pytest>=8.0", "coverage>=7.0", "ruff", "mypy"]
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+metadata = false
+fallback-version = "0.0.0"
+
+[tool.pytest.ini_options]
+addopts = "-rxXs --strict-config --strict-markers"
+xfail_strict = true
+testpaths = ["tests"]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source_pkgs = ["hatch_zig", "tests"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+precision = 2
+fail_under = 100
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "FA", "UP", "RUF100"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.mypy]
+strict = true
+warn_unused_ignores = true
+show_error_codes = true
+files = ["src"]

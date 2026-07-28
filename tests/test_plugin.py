@@ -163,19 +163,35 @@ def test_windows_python_link_non_windows(monkeypatch: pytest.MonkeyPatch) -> Non
     assert _windows_python_link() == {}
 
 
+def _fake_config_vars(monkeypatch: pytest.MonkeyPatch, **values: str | None) -> None:
+    """Stub sysconfig.get_config_var so it answers per name, not for every lookup -
+    otherwise a test passes no matter which variable the plugin reads."""
+    monkeypatch.setattr("hatch_ziglang.plugin.sysconfig.get_config_var", lambda name: values.get(name))
+
+
 def test_windows_python_link(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "win32")
     monkeypatch.setattr("hatch_ziglang.plugin.sys.base_prefix", r"C:\Python314")
     monkeypatch.setattr("hatch_ziglang.plugin.sys.version_info", SimpleNamespace(major=3, minor=14))
-    monkeypatch.setattr("hatch_ziglang.plugin.sysconfig.get_config_var", lambda name: "t")
+    _fake_config_vars(monkeypatch, abi_thread="t", abiflags="t")
     env = _windows_python_link()
     assert env["HATCH_ZIG_PYTHON_LIB"] == "python314t"
     assert env["HATCH_ZIG_PYTHON_LIBDIR"].endswith("libs")
 
 
-def test_windows_python_link_no_abiflags(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_windows_python_link_no_abi_thread(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "win32")
     monkeypatch.setattr("hatch_ziglang.plugin.sys.base_prefix", r"C:\Python313")
     monkeypatch.setattr("hatch_ziglang.plugin.sys.version_info", SimpleNamespace(major=3, minor=13))
-    monkeypatch.setattr("hatch_ziglang.plugin.sysconfig.get_config_var", lambda name: None)
+    _fake_config_vars(monkeypatch)
     assert _windows_python_link()["HATCH_ZIG_PYTHON_LIB"] == "python313"
+
+
+def test_windows_python_link_free_threaded_without_abiflags(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Windows has no sys.abiflags, so sysconfig reports it empty even on a
+    # free-threaded interpreter; only abi_thread carries the `t`.
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.platform", "win32")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.base_prefix", r"C:\Python314")
+    monkeypatch.setattr("hatch_ziglang.plugin.sys.version_info", SimpleNamespace(major=3, minor=14))
+    _fake_config_vars(monkeypatch, abi_thread="t", abiflags="")
+    assert _windows_python_link()["HATCH_ZIG_PYTHON_LIB"] == "python314t"

@@ -39,9 +39,12 @@ def _windows_python_link() -> dict[str, str]:
     if sys.platform != "win32":
         return {}
     libdir = os.path.join(sys.base_prefix, "libs")
-    # e.g. (3, 14) -> "python314"; free-threaded builds use "python314t".
-    abiflags = sysconfig.get_config_var("abiflags") or ""
-    libname = f"python{sys.version_info.major}{sys.version_info.minor}{abiflags}"
+    # e.g. (3, 14) -> "python314"; free-threaded builds use "python314t". The `t`
+    # comes from `abi_thread`, not `abiflags`: the latter is empty on Windows
+    # (there is no `sys.abiflags` there), which would link a free-threaded
+    # extension against the GIL import library and fail to resolve it.
+    abi_thread = sysconfig.get_config_var("abi_thread") or ""
+    libname = f"python{sys.version_info.major}{sys.version_info.minor}{abi_thread}"
     return {"HATCH_ZIG_PYTHON_LIBDIR": libdir, "HATCH_ZIG_PYTHON_LIB": libname}
 
 
